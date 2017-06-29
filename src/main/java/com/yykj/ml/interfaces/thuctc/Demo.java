@@ -111,5 +111,10 @@ public class Demo {
 		
 	}
 
-	
+	public static String test() {
+		return "function";
+
+	}
+
+	public static String test = "field";
 }

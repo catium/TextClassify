@@ -11,7 +11,7 @@ import com.github.tototoshi.csv._
 class CsvParser(csvFileName : String, contentAt : Seq[Int], labelAt : Int) {
 
   var workingDirectory : String = {
-     new File(csvFileName).getParent
+     new File(csvFileName).getParent()
   }
 
   def parse() : Unit = {
@@ -30,7 +30,7 @@ class CsvParser(csvFileName : String, contentAt : Seq[Int], labelAt : Int) {
     val uuid = java.util.UUID.randomUUID.toString
     val fullFileName = workingDirectory + File.separator + label + File.separator + uuid + ".txt"
     val newFile = new File(fullFileName)
-    newFile.getParentFile.mkdirs()
+    newFile.getParentFile().mkdirs()
     newFile.createNewFile()
     println("writing "+fullFileName)
 
