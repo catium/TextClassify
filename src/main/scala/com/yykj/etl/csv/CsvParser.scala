@@ -1,7 +1,8 @@
 package com.yykj.etl.csv
 
-import java.io.{File, FileWriter}
-
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 import com.github.tototoshi.csv._
 
 /**
@@ -10,7 +11,7 @@ import com.github.tototoshi.csv._
 class CsvParser(csvFileName : String, contentAt : Seq[Int], labelAt : Int) {
 
   var workingDirectory : String = {
-     new File(csvFileName).getParent()
+     new File(csvFileName).getParent
   }
 
   def parse() : Unit = {
@@ -29,11 +30,10 @@ class CsvParser(csvFileName : String, contentAt : Seq[Int], labelAt : Int) {
     val uuid = java.util.UUID.randomUUID.toString
     val fullFileName = workingDirectory + File.separator + label + File.separator + uuid + ".txt"
     val newFile = new File(fullFileName)
-    newFile.getParentFile().mkdirs()
+    newFile.getParentFile.mkdirs()
     newFile.createNewFile()
     println("writing "+fullFileName)
-    import java.io.FileOutputStream
-    import java.io.OutputStreamWriter
+
     val writer = new OutputStreamWriter(new FileOutputStream(newFile), "UTF-8")
     writer.write(contentBuffer.toString)
     writer.flush()
