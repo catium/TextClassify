@@ -260,38 +260,11 @@ public class BasicTextClassifier{
 	public int getCategorySize () {
 		return categoryList.size();
 	}
+
 	/**
 	 * 从文件中获取分类列表
 	 */
-	public boolean loadCategoryListFromFile(String filePath) {
-		File f;
-		if (filePath == null || !(f = new File(filePath)).exists() || !f.isFile()) {
-			System.out.println("load categoryListFromFile failed");
-			return false;
-		}
-		categoryList.clear();
-		String s;
-		TextFileReader tfr;
-		try {
-			tfr = new TextFileReader(filePath, encoding);
-			while ((s = tfr.readLine()) != null) {
-				categoryList.add(s);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			return false;
-		}
-		
-		categoryToInt.clear();
-		System.out.println("--------------------------------\nCategory List:");
-		for (int i = 0; i < categoryList.size(); ++i) {
-			categoryToInt.put(categoryList.get(i), i);
-			System.out.println(i + "\t\t" + categoryList.get(i));
-		}
-		System.out.println("--------------------------------");
-		
-		return true;
-	}
+	//refed
 	
 	/**
 	 * 从文件夹中获取分类列表

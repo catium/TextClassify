@@ -1,5 +1,5 @@
 
-import com.yykj.etl.csv.CsvParser
+import com.yykj.etl.csv.CsvResolver
 import com.yykj.ml.interfaces.thuctc.Demo
 
 
@@ -18,9 +18,8 @@ object Main {
 
   }
 
-  def parseCsv(): Unit =
-  {
-    val p = new CsvParser("D:\\MLSpace\\ZL\\qd.csv", Seq(1,8), 14)
-    p.parse()
+  def parseCsv(): Unit = {
+    val p = new CsvResolver("D:\\MLSpace\\ZL\\qd.csv", Seq(1,8), 14)
+    p.resolveEachLineToSingleFile()
   }
 }
