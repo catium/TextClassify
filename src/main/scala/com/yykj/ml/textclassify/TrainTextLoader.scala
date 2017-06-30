@@ -1,12 +1,9 @@
-package com.yykj.etl.loader
+package com.yykj.ml.textclassify
 
-import java.io.IOException
-
-import org.thunlp.io.TextFileReader
-import org.thunlp.language.chinese.LangUtils
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
+import org.thunlp.language.chinese.LangUtils
 
 import scala.collection.mutable
 import scala.io.Source
@@ -16,7 +13,23 @@ import scala.io.Source
   */
 class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable.Map[String, Int]) extends LazyLogging {
 
-  def loadFileAsCorpus(file: File, label: Int) : Unit = {
+  def loadFileAsCorpus(filePath : String , label : String) : Unit = {
+    logger.info("读取训练文件...")
+    val file = new File(filePath)
+    if ( ! file.isFile) {
+      logger.error("读取训练文件...失败 训练文件不是文件")
+      throw new Exception("train file not a file")
+    }
+    if( ! categoryMap.contains(label))
+    {
+      logger.error("分类名不存在")
+      throw new Exception("分类名不存在")
+    }
+    val labelInt = categoryMap(label)
+    loadFileAsCorpus(file, labelInt)
+  }
+
+  protected def loadFileAsCorpus(file: File, label: Int) : Unit = {
     file.getName.split('.').last match {
       case "csv" => loadCsvToItemByLine(file, label)
       case  _ => loadTxtToItemByFile(file, label)

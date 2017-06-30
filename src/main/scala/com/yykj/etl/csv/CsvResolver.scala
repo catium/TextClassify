@@ -51,7 +51,7 @@ class CsvResolver(csvFileName : String, contentAt : Seq[Int], labelAt : Int) {
     newFile.createNewFile()
     println("writing "+ fileName)
 
-    val writer = new OutputStreamWriter(new FileOutputStream(newFile), "UTF-8")
+    val writer = new OutputStreamWriter(new FileOutputStream(newFile, false), "UTF-8")
     writer.write(content)
     writer.flush()
     writer.close()

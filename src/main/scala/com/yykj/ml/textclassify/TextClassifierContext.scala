@@ -1,11 +1,13 @@
 package com.yykj.ml.textclassify
 
-import java.io.File
+import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.util
 import java.util.{ArrayList, Hashtable}
 
 import com.yykj.etl.file.FileValidator
 import org.thunlp.text.classifiers.{BigramChineseTextClassifier, LinearBigramChineseTextClassifier, TextClassifier}
+
+import scala.io.Source
 
 /**
   * Created by Amber on 2017/6/29.
@@ -31,7 +33,7 @@ class TextClassifierArgumentResolver {
 }
 
 class TextClassifierContext {
-  private val category = new Category()
+  val category = new Category()
 
   /**
     * 是否已读取模型
@@ -74,10 +76,7 @@ class TextClassifierContext {
     * 测试文件使用比例
     */
   protected var ratio2 = 0.2
-  /**
-    * 最大特征数
-    */
-  protected var maxFeatures: Int = -1
+
   /**
     * 文件编码
     */
@@ -93,19 +92,84 @@ class TextClassifierContext {
 
   protected var index = 0
 
+  private val configFileName_MaxFeatures = "configMaxFeatures"
+  private val configFileName_Categories = "configCategories"
+  def loadConfigurationFromFile(configDirectory : String) : Unit = {
+    FileValidator.validateDirectory(configDirectory)
+
+    val configFilePath_MaxFeatures = configDirectory + File.separator + configFileName_MaxFeatures
+    FileValidator.validateFile(configFilePath_MaxFeatures)
+    val maxFeaturesFromFile = Source.fromFile(configFilePath_MaxFeatures).getLines().mkString.toInt
+    maxFeatures(maxFeaturesFromFile)
+
+    val configFilePath_Categories = configDirectory + File.separator + configFileName_Categories
+    FileValidator.validateFile(configFilePath_MaxFeatures)
+    category.loadCategoryListFromFile(configFilePath_Categories)
+  }
+
+  def saveConfigurationToFile(configDirectory : String) : Unit = {
+    FileValidator.validateDirectory(configDirectory)
+
+    val configFilePath_MaxFeatures = configDirectory + File.separator + configFileName_MaxFeatures
+    FileValidator.validateFile(configFilePath_MaxFeatures)
+    val configFileWriter_MaxFeatures = new OutputStreamWriter(new FileOutputStream(configFilePath_MaxFeatures, false), "UTF-8")
+    configFileWriter_MaxFeatures.write(maxFeatures.toString)
+    configFileWriter_MaxFeatures.flush()
+    configFileWriter_MaxFeatures.close()
+
+    val configFilePath_Categories = configDirectory + File.separator + configFileName_Categories
+    FileValidator.validateFile(configFilePath_MaxFeatures)
+    category.saveCategoryListToFile(configFilePath_Categories)
+  }
+
+
+  /**
+    * 最大特征数
+    */
+  protected var _maxFeatures: Int = -1
+  def maxFeatures(max : Int) : Unit = {
+    if(max <= 0)
+      throw new Exception("最大特征必须>0")
+    _maxFeatures = max
+  }
+  def maxFeatures = _maxFeatures
+
   /**
     * svm使用liblinear
     * false to set as libsvm
     */
-  protected var linear = true
+  protected var _useLiblinearAsSvm = true
   def useLiblinearAsSvm(isUse : Boolean) : Unit = {
-    linear = isUse
+    _useLiblinearAsSvm = isUse
   }
+  def useLiblinearAsSvm = _useLiblinearAsSvm
+
+  /**
+    * 读取模型路径
+    */
+  protected var _modelPathLoad : String = null
+  def modelPathLoad(folder : String) : Unit = {
+    FileValidator.validateDirectory(folder)
+    _modelPathLoad = folder
+  }
+  def modelPathLoad = _modelPathLoad
+
+  /**
+    * 保存模型路径
+    */
+  protected var _modelPathSave : String = null
+  def modelPathSave(folder : String) : Unit = {
+    FileValidator.validateDirectory(folder)
+    _modelPathSave= folder
+  }
+  def modelPathSave = _modelPathSave
+
+
 
   /**
     * 训练语料路径
     */
-  protected var trainingFolder : String = null
+  var trainingFolder : String = null
   def setTrainingFolder(folder : String) : Unit = {
     FileValidator.validateDirectory(folder)
     trainingFolder = folder
@@ -114,29 +178,15 @@ class TextClassifierContext {
   /**
     * 测试语料路径
     */
-  protected var testingFolder : String = null
+  var testingFolder : String = null
   def setTestingFolder(folder : String) : Unit = {
     FileValidator.validateDirectory(folder)
     testingFolder = folder
   }
 
-  /**
-    * 读取模型路径
-    */
-  protected var loadModelPath : String = null
-  def setLoadModelPath(folder : String) : Unit = {
-    FileValidator.validateDirectory(folder)
-    loadModelPath = folder
-  }
 
-  /**
-    * 保存模型路径
-    */
-  protected var saveModelPath : String = null
-  def setSaveModelPath(folder : String) : Unit = {
-    FileValidator.validateDirectory(folder)
-    saveModelPath = folder
-  }
+
+
 }
 
 else if ("-classify".equals(args[i])) {
@@ -203,8 +253,4 @@ else if ("-classify".equals(args[i])) {
 
     if (categoryList.size() == 0 && (testingFolder != null || loadModelPath != null))
       exit("Category list NOT LOADED !!! \nUse [-c CATEGORY_LIST_FILE_PATH] ");
-    if (linear)
-      setTextClassifier(new LinearBigramChineseTextClassifier(categoryList.size()));
-    else
-      setTextClassifier(new BigramChineseTextClassifier(categoryList.size()));
 }

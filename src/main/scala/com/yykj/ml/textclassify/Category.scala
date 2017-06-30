@@ -1,18 +1,42 @@
 package com.yykj.ml.textclassify
 
-import scala.io.Source
+import java.io.{File, FileOutputStream, OutputStreamWriter}
 
+import com.typesafe.scalalogging.LazyLogging
+
+import scala.io.Source
 import scala.collection.mutable
 
 /**
   * Created by Amber on 2017/6/29.
   */
-class Category {
+class Category extends LazyLogging {
   val categoryList : mutable.ListBuffer[String] = mutable.ListBuffer[String]()
   val categoryToInt : mutable.Map[String, Int] = mutable.Map[String, Int]()
 
-  def loadCategoryListFromFile(filePath: String):
-  Unit = {
+  def loadCategoryListFromDirectoryName(rootPath: String): Boolean = {
+    logger.info("依据文件夹名读取分类列表...")
+    val directory = new File(rootPath)
+    if (!directory.isDirectory) {
+      logger.error("依据文件夹名读取分类列表...失败 根目录不是文件夹")
+      throw new Exception("train directory not a directory")
+    }
+
+    val categories = directory.listFiles().filter(_.isDirectory)
+    logger.info("依据文件夹名读取分类列表...完成")
+    var i : Int = -1
+    categories.foreach(
+      o =>
+        {
+          i += 1
+          val name = o.getName
+          categoryList.append(name)
+          categoryToInt += (name -> i)
+        }
+    )
+  }
+
+  def loadCategoryListFromFile(filePath: String): Unit = {
     categoryList.clear()
     categoryToInt.clear()
 
@@ -24,18 +48,25 @@ class Category {
     var i : Int = -1
     categoryList.foreach(
       o =>
-        {
-          i += 1
-          categoryToInt += (o -> i)
-        }
+      {
+        i += 1
+        categoryToInt += (o -> i)
+      }
     )
 
-    println("--------------------------------\nCategory List:")
+    logger.info("--------------------------------\nCategory List:")
 
     (categoryList,categoryToInt).zipped.foreach(
       (x,y) =>
-        println(x + "\t" + y))
+        logger.info(x + "\t" + y))
 
-    println("--------------------------------")
+    logger.info("--------------------------------")
+  }
+
+  def saveCategoryListToFile(filePath: String): Unit = {
+    val writer = new OutputStreamWriter(new FileOutputStream(filePath, false), "UTF-8")
+    categoryList.foreach(writer.write)
+    writer.flush()
+    writer.close()
   }
 }
