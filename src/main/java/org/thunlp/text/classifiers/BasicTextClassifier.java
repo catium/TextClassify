@@ -260,16 +260,62 @@ public class BasicTextClassifier{
 	public int getCategorySize () {
 		return categoryList.size();
 	}
-
 	/**
 	 * 从文件中获取分类列表
 	 */
-	//refed
+	public boolean loadCategoryListFromFile(String filePath) {
+		File f;
+		if (filePath == null || !(f = new File(filePath)).exists() || !f.isFile()) {
+			System.out.println("load categoryListFromFile failed");
+			return false;
+		}
+		categoryList.clear();
+		String s;
+		TextFileReader tfr;
+		try {
+			tfr = new TextFileReader(filePath, encoding);
+			while ((s = tfr.readLine()) != null) {
+				categoryList.add(s);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		categoryToInt.clear();
+		System.out.println("--------------------------------\nCategory List:");
+		for (int i = 0; i < categoryList.size(); ++i) {
+			categoryToInt.put(categoryList.get(i), i);
+			System.out.println(i + "\t\t" + categoryList.get(i));
+		}
+		System.out.println("--------------------------------");
+		
+		return true;
+	}
 	
 	/**
 	 * 从文件夹中获取分类列表
 	 */
-	//refed
+	public boolean loadCategoryListFromFolder(String folder) {
+		File f;
+		if (folder == null || !(f = new File(folder)).exists() || !f.isDirectory())
+			return false;
+		categoryList.clear();
+		File listFiles[] = f.listFiles();
+		for (int i = 0 ; i < listFiles.length; ++i)
+			if (listFiles[i].isDirectory())
+				categoryList.add(listFiles[i].getName());
+		
+		categoryToInt.clear();
+		System.out.println("--------------------------------\nCategory List:");
+		for (int i = 0; i < categoryList.size(); ++i) {
+			categoryToInt.put(categoryList.get(i), i);
+			System.out.println(i + "\t\t" + categoryList.get(i));
+		}
+		System.out.println("--------------------------------");
+		
+		return true;
+	}
 
 	public static double average(double array[]) {
 		double sum = 0;
@@ -281,13 +327,56 @@ public class BasicTextClassifier{
 	/**
 	 * 对训练文件中的文本进行预处理，整理成标准格式
 	 */
-	//refed
-
+	public String trainerfilter(String text){
+		if(text.length() > 6003){
+			text = text.substring(0, 6001);
+		}
+		char[] chs = new char[text.length()];
+		text = LangUtils.mapFullWidthLetterToHalfWidth(text);
+		text = LangUtils.mapChineseMarksToAnsi(text);
+		text = LangUtils.mapFullWidthNumberToHalfWidth(text);
+		text = LangUtils.removeEmptyLines(text);
+		text = LangUtils.removeExtraSpaces(text);
+		int id = 0;
+		for(int i=0;i<text.length();i++){
+			char c = text.charAt(i);
+			if(LangUtils.isChinese(c)
+					 || ((int)c >31&& (int)c<128)
+					){
+				chs[id]=c;
+				id++;
+			}
+		}
+		return LangUtils.T2S(new String(chs).trim());//否则后面会有空格
+	}
 	/**
 	 * 给定类别，添加训练文本
 	 */
-	//refed
-
+	public boolean addTrainingText(String category, String filename) {
+		int label = -1;
+		if (filename == null) {
+			System.err.println("ERROR : AddTrainingText()  filename is NULL !");
+			return false;
+		}
+		if (category == null || !categoryToInt.containsKey(category) || (label = categoryToInt.get(category)) < 0) {
+			System.err.println("ERROR : AddTrainingText()  Can't find category: " 
+					+ category + " "
+					+ categoryToInt.keySet().contains(category) + " " 
+					+ categoryToInt.toString() + " " 
+					+ categoryToInt.get(category));
+			return false;
+		}
+		String content;
+		try {
+			content = TextFileReader.readAll(filename, encoding);
+			content = trainerfilter(content);
+			classifier.addTrainingText(content, label);
+		} catch (IOException e) {
+			System.err.println("ERROR : AddTrainingText()  Can't read content from " + filename);
+			return false;
+		}
+		return true;
+	}
 	/**
 	 * 自动添加训练文件
 	 */
@@ -340,13 +429,13 @@ public class BasicTextClassifier{
 	protected void printDetail() {
 		System.err.println(index + "  " + System.currentTimeMillis());
 	}
-
+	
 	/**
-	 *
+	 * 
 	 * 对一个文件进行分类，返回前topN个分类结果
-	 *
+	 * 
 	 * 如果输入的filepath是文件夹，则只会在Console中打印每个子文件的分类结果，返回值是空数组
-	 *
+	 * 
 	 */
 	public ClassifyResult[] classifyFile(String filepath, int topN){
 		if(filepath == null) {

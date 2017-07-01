@@ -5,7 +5,7 @@ import com.yykj.ml.interfaces.thuctc.Demo
 
 object Main {
   def main(args: Array[String]): Unit = {
-    print(Demo.test)
+    parseCsv()
   }
 
   def train(): Unit = {

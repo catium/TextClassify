@@ -2,7 +2,7 @@ package com.yykj.ml.textclassify
 
 import java.io.File
 
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.StrictLogging
 import org.thunlp.language.chinese.LangUtils
 
 import scala.collection.mutable
@@ -11,7 +11,7 @@ import scala.io.Source
 /**
   * Created by Amber on 2017/6/30.
   */
-class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable.Map[String, Int]) extends LazyLogging {
+class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable.Map[String, Int]) extends StrictLogging {
 
   def loadFileAsCorpus(filePath : String , label : String) : Unit = {
     logger.info("读取训练文件...")

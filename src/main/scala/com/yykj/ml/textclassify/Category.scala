@@ -2,7 +2,7 @@ package com.yykj.ml.textclassify
 
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.io.Source
 import scala.collection.mutable
@@ -10,11 +10,11 @@ import scala.collection.mutable
 /**
   * Created by Amber on 2017/6/29.
   */
-class Category extends LazyLogging {
+class Category extends StrictLogging {
   val categoryList : mutable.ListBuffer[String] = mutable.ListBuffer[String]()
   val categoryToInt : mutable.Map[String, Int] = mutable.Map[String, Int]()
 
-  def loadCategoryListFromDirectoryName(rootPath: String): Boolean = {
+  def loadCategoryListFromDirectoryName(rootPath: String): Unit = {
     logger.info("依据文件夹名读取分类列表...")
     val directory = new File(rootPath)
     if (!directory.isDirectory) {
@@ -40,7 +40,7 @@ class Category extends LazyLogging {
     categoryList.clear()
     categoryToInt.clear()
 
-    Source.fromFile(String).getLines().foreach(
+    Source.fromFile(filePath).getLines().foreach(
       o =>
         categoryList.append(o)
     )
