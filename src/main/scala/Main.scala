@@ -1,6 +1,5 @@
 
 import com.yykj.etl.CsvResolver
-import com.yykj.ml.interfaces.thuctc.Demo
 import com.yykj.ml.textclassify.TextClassifyProject
 
 
@@ -9,7 +8,7 @@ object Main {
 
 
   def main(args: Array[String]): Unit = {
-    use()
+    train()
   }
 
   def train(): Unit = {

@@ -4,6 +4,8 @@ import java.io.{File, FileOutputStream, OutputStreamWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import com.yykj.etl.{FileReader, FileValidator}
+import play.api.libs.json.Json
+
 import scala.collection.mutable
 
 /**
@@ -61,7 +63,7 @@ class TextClassifyContext extends LazyLogging{
 
   }
 
-  def saveCategoryListToFile(filePath: String): Unit = {
+  private def saveCategoryListToFile(filePath: String): Unit = {
     val writer = new OutputStreamWriter(new FileOutputStream(filePath, false), "UTF-8")
     categoryList.foreach(
       o =>
@@ -73,6 +75,8 @@ class TextClassifyContext extends LazyLogging{
 
   private val configFileName_MaxFeatures = "configMaxFeatures"
   private val configFileName_Categories = "configCategories"
+  private val configFileName_Properties = "properties"
+
   def loadConfigurationFromFile(configDirectory : String) : Unit = {
     FileValidator.validateDirectory(configDirectory)
 
@@ -99,6 +103,21 @@ class TextClassifyContext extends LazyLogging{
     val configFilePath_Categories = configDirectory + File.separator + configFileName_Categories
 
     saveCategoryListToFile(configFilePath_Categories)
+
+    val properties = Json.toJson(
+      Map(
+        "maxFeatures" -> Json.toJson(maxFeatures),
+        "useLiblinearAsSvm" -> Json.toJson(useLiblinearAsSvm),
+        "categories" -> Json.toJson(categoryList)
+      )
+    )
+
+    val configFilePath_Properties = configDirectory + File.separator + configFileName_Properties
+    val configFileWriter_Properties = new OutputStreamWriter(new FileOutputStream(configFilePath_Properties, false), "UTF-8")
+    configFileWriter_Properties.write(properties.toString())
+    configFileWriter_Properties.flush()
+    configFileWriter_Properties.close()
+
   }
 
   /**
