@@ -3,122 +3,102 @@ package com.yykj.ml.textclassify
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 
 import com.typesafe.scalalogging.LazyLogging
-import com.yykj.etl.{FileReader, FileValidator}
+import com.yykj.etl.{FileName, FileReader, FileValidator}
 import play.api.libs.json.Json
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by Amber on 2017/6/29.
   */
 
-class TextClassifyContext extends LazyLogging{
-  protected val categoryList : mutable.ListBuffer[String] = mutable.ListBuffer[String]()
-  //val categoryToInt : mutable.Map[String, Int] = mutable.Map[String, Int]()
+object TextClassifyContext extends LazyLogging {
+  def open(workDirectory : String) : TextClassifyContext = {
+    val instance = new TextClassifyContextImpl()
+    instance.workDirectory(workDirectory)
+    instance.loadPropertiesFromWorkDirectory()
+    instance
+  }
 
-  def categoryLength() : Int = categoryList.length
+  def create(useLiblinearAsSvm : Boolean,
+              maxFeatures : Int,
+              loadCategoryListFromDirectoryName : String
+            ) : TextClassifyContext = {
+    val instance = new TextClassifyContextImpl()
+    instance.useLiblinearAsSvm(useLiblinearAsSvm)
+    instance.maxFeatures(maxFeatures)
+    instance.loadCategoryListFromDirectoryName(loadCategoryListFromDirectoryName)
+    instance
+  }
 
-  def categoryName(index : Int) : String = categoryList(index)
 
-  def categoryIndex(name : String) : Int = categoryList.indexOf(name)
+  private class TextClassifyContextImpl extends TextClassifyContext with LazyLogging{
 
-  def loadCategoryListFromDirectoryName(rootPath: String): Unit = {
-    logger.info("依据文件夹名读取分类列表...")
-    val directory = new File(rootPath)
-    if (!directory.isDirectory) {
-      logger.error("依据文件夹名读取分类列表...失败 根目录不是文件夹")
-      throw new Exception("train directory not a directory")
+    def loadCategoryListFromDirectoryName(rootPath: String): Unit = {
+      logger.info("依据文件夹名读取分类列表...")
+      val directory = new File(rootPath)
+      if (!directory.isDirectory) {
+        logger.error("依据文件夹名读取分类列表...失败 根目录不是文件夹")
+        throw new Exception("train directory not a directory")
+      }
+
+      val categoriesRead = directory.listFiles().filter(_.isDirectory)
+      logger.info("依据文件夹名读取分类列表...完成")
+      categoriesRead.foreach(
+        o =>
+        {
+          val name = o.getName
+          categories.append(name)
+        }
+      )
     }
 
-    val categories = directory.listFiles().filter(_.isDirectory)
-    logger.info("依据文件夹名读取分类列表...完成")
-    var i : Int = -1
-    categories.foreach(
-      o =>
-      {
-        i += 1
-        val name = o.getName
-        categoryList.append(name)
-        //categoryToInt += (name -> i)
-      }
-    )
-  }
+    private val configFileName_Properties = "properties"
+    def loadPropertiesFromWorkDirectory() : Unit = {
+      FileValidator.validateDirectory(workDirectory)
 
-  private def loadCategoryListFromFile(filePath: String): Unit = {
-    categoryList.clear()
+      val configFilePath_Properties = FileName.concatPath(workDirectory,configFileName_Properties)
+      FileValidator.validateFile(configFilePath_Properties)
+      val propertiesJson = FileReader.readEntire(configFilePath_Properties)
+      val propertiesJValue = Json.parse(propertiesJson)
+      maxFeatures((propertiesJValue \ "maxFeatures").as[Int])
+      useLiblinearAsSvm((propertiesJValue \ "useLiblinearAsSvm").as[Boolean])
+      categories = (propertiesJValue \ "categories").as[List[String]].to[ListBuffer]
 
-    FileReader.readLines(filePath).foreach(
-      o =>
-        categoryList.append(o)
-    )
+    }
 
-    var i : Int = -1
-    categoryList.foreach(
-      o =>
-      {
-        i += 1
-        logger.info(i + "\t" + categoryList(i))
-      }
-    )
+    def savePropertiesToWorkDirectory() : Unit = {
+      new File(workDirectory).mkdirs()
 
-  }
-
-  private def saveCategoryListToFile(filePath: String): Unit = {
-    val writer = new OutputStreamWriter(new FileOutputStream(filePath, false), "UTF-8")
-    categoryList.foreach(
-      o =>
-        writer.write(o+"\n")
-    )
-    writer.flush()
-    writer.close()
-  }
-
-  private val configFileName_MaxFeatures = "configMaxFeatures"
-  private val configFileName_Categories = "configCategories"
-  private val configFileName_Properties = "properties"
-
-  def loadConfigurationFromFile(configDirectory : String) : Unit = {
-    FileValidator.validateDirectory(configDirectory)
-
-    val configFilePath_MaxFeatures = configDirectory + File.separator + configFileName_MaxFeatures
-    FileValidator.validateFile(configFilePath_MaxFeatures)
-    val maxFeaturesFromFile = FileReader.readEntire(configFilePath_MaxFeatures).toInt
-    maxFeatures(maxFeaturesFromFile)
-
-    val configFilePath_Categories = configDirectory + File.separator + configFileName_Categories
-    FileValidator.validateFile(configFilePath_Categories)
-    loadCategoryListFromFile(configFilePath_Categories)
-  }
-
-  def saveConfigurationToFile(configDirectory : String) : Unit = {
-    FileValidator.validateDirectory(configDirectory)
-
-    val configFilePath_MaxFeatures = configDirectory + File.separator + configFileName_MaxFeatures
-
-    val configFileWriter_MaxFeatures = new OutputStreamWriter(new FileOutputStream(configFilePath_MaxFeatures, false), "UTF-8")
-    configFileWriter_MaxFeatures.write(maxFeatures.toString)
-    configFileWriter_MaxFeatures.flush()
-    configFileWriter_MaxFeatures.close()
-
-    val configFilePath_Categories = configDirectory + File.separator + configFileName_Categories
-
-    saveCategoryListToFile(configFilePath_Categories)
-
-    val properties = Json.toJson(
-      Map(
-        "maxFeatures" -> Json.toJson(maxFeatures),
-        "useLiblinearAsSvm" -> Json.toJson(useLiblinearAsSvm),
-        "categories" -> Json.toJson(categoryList)
+      val properties = Json.toJson(
+        Map(
+          "maxFeatures" -> Json.toJson(maxFeatures),
+          "useLiblinearAsSvm" -> Json.toJson(useLiblinearAsSvm),
+          "categories" -> Json.toJson(categories)
+        )
       )
-    )
 
-    val configFilePath_Properties = configDirectory + File.separator + configFileName_Properties
-    val configFileWriter_Properties = new OutputStreamWriter(new FileOutputStream(configFilePath_Properties, false), "UTF-8")
-    configFileWriter_Properties.write(properties.toString())
-    configFileWriter_Properties.flush()
-    configFileWriter_Properties.close()
+      val configFilePath_Properties = FileName.concatPath(workDirectory, configFileName_Properties)
+      val configFileWriter_Properties = new OutputStreamWriter(new FileOutputStream(configFilePath_Properties, false), "UTF-8")
+      configFileWriter_Properties.write(Json.stringify(properties))
+      configFileWriter_Properties.flush()
+      configFileWriter_Properties.close()
+
+    }
+
 
   }
+}
+
+sealed trait TextClassifyContext {
+  protected var categories : mutable.ListBuffer[String] = mutable.ListBuffer[String]()
+
+  def categoryLength() : Int = categories.length
+
+  def categoryName(index : Int) : String = categories(index)
+
+  def categoryIndex(name : String) : Int = categories.indexOf(name)
 
   /**
     * 最大特征数
@@ -141,7 +121,18 @@ class TextClassifyContext extends LazyLogging{
   }
   def useLiblinearAsSvm = _useLiblinearAsSvm
 
+  /**
+    * 模型,配置目录
+    */
+  protected var _workDirectory : String = null
+  def workDirectory(path : String) : Unit = {
+    _workDirectory = path
+  }
+  def workDirectory = _workDirectory
 
+  def savePropertiesToWorkDirectory() : Unit
 }
+
+
 
 

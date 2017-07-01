@@ -8,7 +8,7 @@ import org.thunlp.text.classifiers.{BigramChineseTextClassifier, LinearBigramChi
 /**
   * Created by Amber on 2017/6/30.
   */
-class TextClassifyController(context : TextClassifyContext) extends LazyLogging {
+class TextClassifyBusinessImpl(context : TextClassifyContext) extends TextClassifyBusiness with LazyLogging {
 
   val classifier : TextClassifier = {
     val categorySize = context.categoryLength()
@@ -18,11 +18,12 @@ class TextClassifyController(context : TextClassifyContext) extends LazyLogging 
     }
     if(context.maxFeatures > 0)
       newClassifier.setMaxFeatures(context.maxFeatures)
+    if(context.workDirectory != null)
+      newClassifier.loadModel(context.workDirectory)
     newClassifier
   }
 
   private val corpusLoader = new TrainTextLoader(classifier.addTrainingText, context.categoryIndex)
-
 
   def trainDirectory(directoryPath : String) : Unit = {
     corpusLoader.loadDirectoryAsCorpus(directoryPath)
@@ -34,15 +35,13 @@ class TextClassifyController(context : TextClassifyContext) extends LazyLogging 
     classifier.train()
   }
 
-
-  def loadModelAndConfiguration(fileDirectory : String) : Unit = {
-    context.loadConfigurationFromFile(fileDirectory)
-    classifier.loadModel(fileDirectory)
-  }
-
-  def saveModelAndConfiguration(fileDirectory : String) : Unit = {
-    context.saveConfigurationToFile(fileDirectory)
-    classifier.saveModel(fileDirectory)
+  def saveModelAndProperties(workDirectory : String) : Unit = {
+    if(workDirectory == null && context.workDirectory == null)
+      throw new Exception("还未指定工作目录")
+    if(workDirectory != null)
+      context.workDirectory(workDirectory)
+    context.savePropertiesToWorkDirectory()
+    classifier.saveModel(context.workDirectory)
   }
 
   def classifyText(text : String, maxResult : Int ) : Unit = {

@@ -1,52 +1,61 @@
 package com.yykj.ml.textclassify
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.typesafe.scalalogging.LazyLogging
-import com.yykj.etl.FileValidator
+import com.yykj.etl.{FileName, FileValidator}
 
 /**
   * Created by Amber on 2017/7/1.
   */
 class TextClassifyProject extends LazyLogging {
+  protected var projectGuid : String = null
+  protected var controller : TextClassifyBusinessImpl = null
   def newProject(
       corpusRoot : String,
-      modelRoot : String,
       useLiblinearAsSvm : Boolean,
       maxFeatures : Int
   ) : String = {
-    val uuid = java.util.UUID.randomUUID.toString
+    projectGuid = java.util.UUID.randomUUID.toString
 
-    val context = new TextClassifyContext()
-    context.useLiblinearAsSvm(useLiblinearAsSvm)
-    context.maxFeatures(maxFeatures)
-    context.loadCategoryListFromDirectoryName(corpusRoot)
+    val context = TextClassifyContext.create(useLiblinearAsSvm,maxFeatures,corpusRoot)
     logger.info("新工程配置完毕")
-    val controller = new TextClassifyController(context)
+    controller = new TextClassifyBusinessImpl(context)
     controller.trainDirectory(corpusRoot)
 
-
-
-    val path = new File(modelRoot, uuid)
-    path.mkdirs()
-    controller.saveModelAndConfiguration(path.getPath)
     logger.info("新工程训练完毕")
-    uuid
+    projectGuid
   }
 
   def openProject(
                   modelRoot : String,
-                  useLiblinearAsSvm : Boolean,
-                  projectGuid : String
+                  guid : String
                  ) : Unit = {
-    val context = new TextClassifyContext()
-    context.useLiblinearAsSvm(useLiblinearAsSvm)
+    projectGuid = guid
 
+    val projectPath = FileName.concatPath(modelRoot, projectGuid)
+    val context = TextClassifyContext.open(projectPath)
+    logger.info("工程配置读取完毕")
+    controller = new TextClassifyBusinessImpl(context)
+    logger.info("工程打开完毕")
+     }
 
-    val projectPath = new File(modelRoot, projectGuid).getPath
-    val controller = new TextClassifyController(context)
-    logger.info("新工程读取完毕")
-    controller.loadModelAndConfiguration(projectPath)
-    controller.classifyText("本实用新型公开了一种用于高电压环境中的无源无线温度传感器，包括一固定于被测物体上的导热块，该导热块上安装一线路板，该线路板底面设有声表面波温度传感器与导热块接触，该线路板上表面上安装有发射天线。本实用新型利用天线捕捉电磁波为声表面波温度传感器提供能量，声表面波温度传感器把检测到的温度信息转换成电磁波后通过天线发出，不需要外接电源及电源线，具有高可靠性和故障率低的优点。",3)
+  def saveProject(workDirectory : String = null) : Unit = {
+    if(projectGuid == null || controller == null) throw new Exception("未打开工程")
+    logger.info("正在保存...")
+    var saveDirectory = workDirectory
+    if(saveDirectory != null)
+      {
+        if(saveDirectory.endsWith(File.separator))
+          saveDirectory = saveDirectory.substring(0, saveDirectory.length - File.separator.length)
+        if( ! saveDirectory.endsWith(projectGuid))
+          saveDirectory = FileName.concatPath(saveDirectory, projectGuid)
+      }
+    controller.saveModelAndProperties(saveDirectory)
+    logger.info("保存完毕...")
+
   }
+
+  def business() : TextClassifyBusiness = controller
 }
