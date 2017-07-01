@@ -1,8 +1,7 @@
-package com.yykj.etl.csv
+package com.yykj.etl
 
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
+import java.io.{File, FileOutputStream, OutputStreamWriter}
+
 import com.github.tototoshi.csv._
 
 /**

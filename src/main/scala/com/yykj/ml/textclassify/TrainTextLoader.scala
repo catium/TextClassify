@@ -2,16 +2,19 @@ package com.yykj.ml.textclassify
 
 import java.io.File
 
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.LazyLogging
+import com.yykj.etl.FileReader
 import org.thunlp.language.chinese.LangUtils
 
 import scala.collection.mutable
-import scala.io.Source
 
 /**
   * Created by Amber on 2017/6/30.
   */
-class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable.Map[String, Int]) extends StrictLogging {
+class TrainTextLoader(loadFunction: (String, Int) => Unit,
+                      categoryFunction_getIndexByName: (String) => Int
+
+                     ) extends LazyLogging {
 
   def loadFileAsCorpus(filePath : String , label : String) : Unit = {
     logger.info("读取训练文件...")
@@ -20,12 +23,12 @@ class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable
       logger.error("读取训练文件...失败 训练文件不是文件")
       throw new Exception("train file not a file")
     }
-    if( ! categoryMap.contains(label))
+    val labelInt = categoryFunction_getIndexByName(label)
+    if( labelInt < 0)
     {
       logger.error("分类名不存在")
       throw new Exception("分类名不存在")
     }
-    val labelInt = categoryMap(label)
     loadFileAsCorpus(file, labelInt)
   }
 
@@ -56,12 +59,13 @@ class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable
 
 
   private def loadTxtToItemByFile(file: File, label: Int) : Unit = {
-    val content = Source.fromFile(file).getLines().mkString
+    logger.debug("读取:" + file.getPath)
+    val content = FileReader.readEntire(file)
     loadSingleItem(content, label)
   }
 
   private def loadCsvToItemByLine(file: File, label: Int) : Unit = {
-    Source.fromFile(file).getLines().foreach(
+    FileReader.readLines(file).foreach(
       line =>
         loadSingleItem(line,label)
     )
@@ -105,13 +109,14 @@ class TrainTextLoader(loadFunction: (String, Int) => Unit, categoryMap : mutable
     }
     val categoryName = categoryDirectory.getName
     logger.info("读取训练列表中的下一个分类...成功.分类名称:" + categoryName)
-    if(!categoryMap.contains(categoryName))
+
+    val categoryInt = categoryFunction_getIndexByName(categoryName)
+    if(categoryInt < 0)
     {
       logger.error("分类名不存在,是否在程序执行中变动了训练文件夹?")
     }
     else
     {
-      val categoryInt = categoryMap(categoryName)
       val files = recursiveListFiles(categoryDirectory)
       logger.error("分类下找到了" + files.length + "个文件")
       files.foreach(loadFileAsCorpus(_,categoryInt))

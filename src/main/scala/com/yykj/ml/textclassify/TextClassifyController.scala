@@ -1,18 +1,17 @@
 package com.yykj.ml.textclassify
 
-import com.typesafe.scalalogging.StrictLogging
-import com.yykj.etl.file.FileValidator
+import com.typesafe.scalalogging.LazyLogging
+import com.yykj.etl.{FileReader, FileValidator}
 import org.thunlp.text.classifiers.{BigramChineseTextClassifier, LinearBigramChineseTextClassifier, TextClassifier}
 
-import scala.io.Source
 
 /**
   * Created by Amber on 2017/6/30.
   */
-class TextClassiferLauncher(context : TextClassifierContext) extends StrictLogging {
+class TextClassifyController(context : TextClassifyContext) extends LazyLogging {
 
   val classifier : TextClassifier = {
-    val categorySize = context.category.categoryList.length
+    val categorySize = context.categoryLength()
     val newClassifier = context.useLiblinearAsSvm match {
       case true => new LinearBigramChineseTextClassifier(categorySize)
       case false => new BigramChineseTextClassifier(categorySize)
@@ -22,15 +21,17 @@ class TextClassiferLauncher(context : TextClassifierContext) extends StrictLoggi
     newClassifier
   }
 
-  private val corpusLoader = new TrainTextLoader(classifier.addTrainingText, context.category.categoryToInt)
+  private val corpusLoader = new TrainTextLoader(classifier.addTrainingText, context.categoryIndex)
 
 
   def trainDirectory(directoryPath : String) : Unit = {
     corpusLoader.loadDirectoryAsCorpus(directoryPath)
+    classifier.train()
   }
 
   def trainFile(filePath : String, label : String) : Unit = {
     corpusLoader.loadFileAsCorpus(filePath, label)
+    classifier.train()
   }
 
 
@@ -51,7 +52,7 @@ class TextClassiferLauncher(context : TextClassifierContext) extends StrictLoggi
       o =>
         {
           i += 1
-          val categoryName = context.category.categoryList(o.label)
+          val categoryName = context.categoryName(o.label)
           logger.info(categoryName + "\t" + o.prob)
         }
       )
@@ -59,7 +60,7 @@ class TextClassiferLauncher(context : TextClassifierContext) extends StrictLoggi
 
   def classifyFile(filePath : String, maxResult : Int ) : Unit = {
     FileValidator.validateFile(filePath)
-    val text = Source.fromFile(filePath).getLines().mkString
+    val text = FileReader.readEntire(filePath)
     classifyText(text, maxResult)
   }
 }
