@@ -44,22 +44,29 @@ class TextClassifyBusinessImpl(context : TextClassifyContext) extends TextClassi
     classifier.saveModel(context.workDirectory)
   }
 
-  def classifyText(text : String, maxResult : Int ) : Unit = {
+  def classifyText(text : String, maxResult : Int ) : Array[(String, Double)] = {
     val result = classifier.classify(text, maxResult)
     var i = -1
     result.foreach(
       o =>
-        {
-          i += 1
-          val categoryName = context.categoryName(o.label)
-          logger.info(categoryName + "\t" + o.prob)
-        }
-      )
+      {
+        i += 1
+        val categoryName = context.categoryName(o.label)
+        logger.info(categoryName + "\t" + o.prob)
+      }
+    )
+    result.map(
+      o =>
+        (context.categoryName(o.label) -> o.prob)
+    )
+
   }
 
-  def classifyFile(filePath : String, maxResult : Int ) : Unit = {
+  def classifyFile(filePath : String, maxResult : Int ) : Array[(String, Double)] = {
     FileValidator.validateFile(filePath)
     val text = FileReader.readEntire(filePath)
     classifyText(text, maxResult)
   }
+
+  def getContext(): TextClassifyContext = context
 }

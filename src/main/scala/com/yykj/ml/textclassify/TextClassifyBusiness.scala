@@ -6,6 +6,8 @@ package com.yykj.ml.textclassify
 trait TextClassifyBusiness {
   def trainDirectory(directoryPath : String) : Unit
   def trainFile(filePath : String, label : String) : Unit
-  def classifyText(text : String, maxResult : Int ) : Unit
-  def classifyFile(filePath : String, maxResult : Int ) : Unit
+  def classifyText(text : String, maxResult : Int ) : Array[(String, Double)]
+  def classifyFile(filePath : String, maxResult : Int ) : Array[(String, Double)]
+
+  def getContext(): TextClassifyContext
 }
